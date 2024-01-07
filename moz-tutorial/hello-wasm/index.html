@@ -6,11 +6,22 @@
   </head>
   <body>
     <script type="module">
-      import init, { greet } from "./pkg/hello_wasm.js";
+      import init, {Universe, get_string} from "./pkg/hello_wasm.js";
       init().then(() => {
-        greet("WebAssembly");
+        const canvas = document.getElementById("life-canvas");
+        const u = Universe.new(1024, 1024);
+        u.randomize(BigInt(0xcce));
+
+        const renderLoop = () => {
+          canvas.textContent = u.render();
+          u.tick();
+
+          requestAnimationFrame(renderLoop);
+        };
+        requestAnimationFrame(renderLoop);
       });
     </script>
+    <pre id="life-canvas"></pre>
   </body>
 </html>
 

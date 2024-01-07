@@ -11,5 +11,6 @@ edition = "2018"
 crate-type = ["cdylib"]
 
 [dependencies]
+rand = { version = "0.8.5", default-features = false, features = ["small_rng"] }
 wasm-bindgen = "0.2"
 
