@@ -6,22 +6,27 @@
   </head>
   <body>
     <script type="module">
-      import init, {Universe, get_string} from "./pkg/hello_wasm.js";
+      import init, {Universe} from "./pkg/hello_wasm.js";
       init().then(() => {
         const canvas = document.getElementById("life-canvas");
-        const u = Universe.new(1024, 1024);
-        u.randomize(BigInt(0xcce));
+        const canvasContext = canvas.getContext("2d");
+
+        const u = Universe.new(canvas.width, canvas.height);
+        u.randomize(BigInt(0xf));
 
         const renderLoop = () => {
-          canvas.textContent = u.render();
+          u.render2d(canvasContext);
           u.tick();
 
-          requestAnimationFrame(renderLoop);
+          // Target 5 FPS
+          setTimeout(() => {
+            requestAnimationFrame(renderLoop);
+
+          }, 1000 / 5)
         };
         requestAnimationFrame(renderLoop);
       });
     </script>
-    <pre id="life-canvas"></pre>
-  </body>
+    <canvas id="life-canvas" width="1024" height="1024"></canvas></body>
 </html>
 

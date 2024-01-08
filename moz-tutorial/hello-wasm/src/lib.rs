@@ -2,13 +2,17 @@ use std::ops::{Index, IndexMut};
 
 use rand::{RngCore, SeedableRng};
 use wasm_bindgen::prelude::*;
+use web_sys::{CanvasRenderingContext2d, ImageData};
 
+/// Cell, represented by its color-state (u32 RGBA)
+/// This lets us treat a
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug, Default, Copy, Clone)]
-#[repr(u8)]
+#[repr(u32)]
 enum Cell {
+    // ARGB? ABGR?
     #[default]
-    Dead = 0,
-    Live = 1,
+    Dead = 0xFF_00_00_00,
+    Live = 0xFF_00_00_FF,
 }
 
 #[wasm_bindgen]
@@ -97,19 +101,42 @@ impl IndexMut<Coord> for Universe {
 
 #[wasm_bindgen]
 impl Universe {
+    pub fn render2d(&self, canvas: &CanvasRenderingContext2d) -> Result<(), JsValue>{
+        let data_slice : &[u8]= {
+            let ptr = self.content.as_ptr() as *const u32 as *const u8;
+            let len = self.content.len() * (std::mem::size_of::<u32>() / std::mem::size_of::<u8>());
+            unsafe {
+                std::slice::from_raw_parts(ptr, len)
+            }
+        };
+        console_log(&format!("data slice: {}", data_slice.len()));
+        console_log(&format!("want: {}", self.width * self.height * 4));
+        assert_eq!(data_slice.len(), self.width * self.height * 4);
+        let data = ImageData::new_with_u8_clamped_array_and_sh(wasm_bindgen::Clamped(data_slice), self.width as u32, self.height as u32)?;
+        canvas.put_image_data(&data, 0.0, 0.0)
+    }
+
     pub fn render(&self) -> String {
         self.to_string()
     }
 
+    pub fn get_width(&self) -> usize {
+        self.width
+    }
+    pub fn get_height(&self) -> usize {
+        self.height
+    }
+
     /// Create a new Universe of the given dimensions.
+    /// The Universe renders into the provided buffer.
     pub fn new(width: usize, height: usize) -> Self {
         let mut content = Vec::new();
-        content.resize(width * height, Cell::Dead);
+        content.resize(width * height, Default::default());
 
         Universe {
             width,
             height,
-            content,
+            content: content,
         }
     }
 
@@ -137,7 +164,7 @@ impl Universe {
         console_log(&format!("randomized, resulting in {} live cells", c));
     }
 
-    /// Advance the time of the universe.
+    /// Tick forward the current state.
     pub fn tick(&mut self) {
         console_log("advancing by one tick");
         let mut content = Vec::with_capacity(self.content.len());
@@ -165,11 +192,7 @@ impl Universe {
         }
         let c = self.content.iter().filter(|x| **x == Cell::Live).count();
         console_log(&format!("tick resulted in {} live cells", c));
-        *self = Self {
-            content,
-            width: self.width,
-            height: self.height,
-        }
+        std::mem::swap(&mut self.content, &mut content);
     }
 }
 
